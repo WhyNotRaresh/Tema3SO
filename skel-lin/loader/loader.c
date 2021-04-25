@@ -17,7 +17,9 @@
 
 #include "exec_parser.h"
 
+
 #define PAGE_SIZE 4096
+
 
 static so_exec_t *exec;
 static int exec_fd;
@@ -57,12 +59,22 @@ void so_map_page(uintptr_t page_fault_addr, so_seg_t *segment)
 		exit(EXIT_FAILURE);
 	}
 
+	((char*)(segment->data))[page_index] = 1;
+
+	/* Copying from file into memory */
+
 	lseek(exec_fd, segment->offset + page_index * PAGE_SIZE, SEEK_SET);
-	if (read(exec_fd, (void*) mapped_addr, PAGE_SIZE) == -1){
+	int bytes_read = read(exec_fd, (void*) mapped_addr, PAGE_SIZE);
+	if (bytes_read == -1){
 		exit(EXIT_FAILURE);
 	}
 
-	((char*)(segment->data))[page_index] = 1;
+	/* Last page */
+
+	if (page_index == segment->file_size / PAGE_SIZE) {
+		memset((void*)(segment->vaddr) + segment->file_size, 0,
+			segment->mem_size - segment->file_size);
+	}
 
 	/* Setting page permissions */
 
@@ -70,6 +82,11 @@ void so_map_page(uintptr_t page_fault_addr, so_seg_t *segment)
 	if ((segment->perm & PERM_R) != 0) perm_flags |= PROT_READ;
 	if ((segment->perm & PERM_W) != 0) perm_flags |= PROT_WRITE;
 	if ((segment->perm & PERM_X) != 0) perm_flags |= PROT_EXEC;
+
+	if (perm_flags == 0) {
+		signal(SIGSEGV, prev_handler);
+		raise(SIGSEGV);
+	}
 
 	mprotect(mapped_addr, PAGE_SIZE, perm_flags);
 }
@@ -80,13 +97,13 @@ void so_sigaction(int sig_no, siginfo_t* sig_info, void* context)
 	uintptr_t page_fault_addr = (int)sig_info->si_addr;
 
 	int i;
-	for (i = 0; i <= exec->segments_no; i++) {
+	for (i = 0; i < exec->segments_no; i++) {
 		so_seg_t *segment = (exec->segments) + i;
 
 		/* Checking boundaries of this segment */
 
-		if (segment->vaddr < page_fault_addr &&
-			page_fault_addr < segment->vaddr + segment->file_size) {
+		if (segment->vaddr <= page_fault_addr &&
+			page_fault_addr <= segment->vaddr + segment->file_size) {
 			so_map_page(page_fault_addr, segment);
 			return;
 		}

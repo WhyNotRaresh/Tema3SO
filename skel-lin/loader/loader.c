@@ -45,7 +45,6 @@ void so_map_page(uintptr_t page_fault_addr, so_seg_t *segment)
 	if (((char*)(segment->data))[page_index] == 1) {
 		signal(SIGSEGV, prev_handler);
 		raise(SIGSEGV);
-		exit(EXIT_FAILURE);
 	}
 
 	/* Mapping page */
@@ -65,16 +64,12 @@ void so_map_page(uintptr_t page_fault_addr, so_seg_t *segment)
 
 	((char*)(segment->data))[page_index] = 1;
 
-	/* Getting page permissions */
+	/* Setting page permissions */
 
 	int perm_flags = 0;
 	if ((segment->perm & PERM_R) != 0) perm_flags |= PROT_READ;
 	if ((segment->perm & PERM_W) != 0) perm_flags |= PROT_WRITE;
 	if ((segment->perm & PERM_X) != 0) perm_flags |= PROT_EXEC;
-
-	if (perm_flags == 0) {
-		exit(EXIT_FAILURE);
-	}
 
 	mprotect(mapped_addr, PAGE_SIZE, perm_flags);
 }
@@ -85,21 +80,20 @@ void so_sigaction(int sig_no, siginfo_t* sig_info, void* context)
 	uintptr_t page_fault_addr = (int)sig_info->si_addr;
 
 	int i;
-	for (i = 0; i < exec->segments_no; i++) {
-		so_seg_t segment = exec->segments[i];
+	for (i = 0; i <= exec->segments_no; i++) {
+		so_seg_t *segment = (exec->segments) + i;
 
 		/* Checking boundaries of this segment */
 
-		if (segment.vaddr < page_fault_addr &&
-			page_fault_addr < segment.vaddr + segment.mem_size) {
-			so_map_page(page_fault_addr, &segment);
+		if (segment->vaddr < page_fault_addr &&
+			page_fault_addr < segment->vaddr + segment->file_size) {
+			so_map_page(page_fault_addr, segment);
 			return;
 		}
 	}
 
 	signal(SIGSEGV, prev_handler);
 	raise(SIGSEGV);
-	exit(EXIT_FAILURE);
 }
 
 int so_init_loader(void)

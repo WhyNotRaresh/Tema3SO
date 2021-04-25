@@ -11,12 +11,12 @@
 
 #include "exec_parser.h"
 
+static so_exec_t *exec;
+
 static void handler(int sig_no)
 {
 	fprintf(stderr, "I CANT BREATH!");
 }
-
-static so_exec_t *exec;
 
 int so_init_loader(void)
 {

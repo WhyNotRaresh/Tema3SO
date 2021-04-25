@@ -76,7 +76,7 @@ void so_start_exec(so_exec_t *exec, char *argv[])
 		"xor %%ebp, %%ebp\n"
 		"xor %%esi, %%esi\n"
 		"xor %%edi, %%edi\n"
-		"jmp *%%rax\n"
+		"jmp *%%eax\n"
 		::"m"(exec->entry), "m"(argv) :);
 }
 

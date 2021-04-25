@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -m64 -Wall -fno-pic
-LDFLAGS = -m64 -no-pie
+CFLAGS = -m32 -Wall -fno-pic
+LDFLAGS = -m32 -no-pie
 LDLIBS = -lso_loader
 
 .PHONY: build

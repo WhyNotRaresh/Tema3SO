@@ -2,3 +2,4 @@ checker-lin/*
 *.o
 *.so
 *.zip
+utils/*

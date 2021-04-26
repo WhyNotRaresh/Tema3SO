@@ -23,7 +23,7 @@
 
 static so_exec_t *exec;
 static int exec_fd;
-static void* prev_handler;
+static void *prev_handler;
 
 
 void alloc_seg_data(so_seg_t *segment)

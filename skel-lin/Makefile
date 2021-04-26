@@ -7,7 +7,6 @@ build: libso_loader.so
 
 libso_loader.so: loader.o exec_parser.o
 	$(CC) $(LDFLAGS) -shared -o $@ $^
-	cp $@ ../checker-lin
 
 exec_parser.o: loader/exec_parser.c loader/exec_parser.h
 	$(CC) $(CFLAGS) -o $@ -c $<

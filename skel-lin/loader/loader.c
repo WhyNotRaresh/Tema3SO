@@ -43,7 +43,7 @@ void so_map_page(uintptr_t page_fault_addr, so_seg_t *segment)
 	/* Getting page start address */
 
 	int page_index = (page_fault_addr - segment->vaddr) / PAGE_SIZE;
-	uintptr_t page_addr = segment->vaddr + page_index * PAGE_SIZE;
+	uintptr_t page_addr = page_index * PAGE_SIZE;
 
 	if (((char *)(segment->data))[page_index] == 1) {
 		fprintf(stderr, "Invalid permissions\n");
@@ -53,7 +53,7 @@ void so_map_page(uintptr_t page_fault_addr, so_seg_t *segment)
 
 	/* Mapping page */
 
-	char *mapped_addr = mmap((int *) page_addr, PAGE_SIZE, PROT_WRITE,
+	char *mapped_addr = mmap(segment->vaddr + page_addr, PAGE_SIZE, PROT_WRITE,
 		MAP_SHARED | MAP_FIXED | MAP_ANON, -1, 0);
 
 	if (mapped_addr == MAP_FAILED) {
@@ -65,11 +65,11 @@ void so_map_page(uintptr_t page_fault_addr, so_seg_t *segment)
 
 	/* Copying from file into memory */
 
-	if (page_index * PAGE_SIZE < segment->file_size) {
-		lseek(exec_fd, segment->offset + page_index * PAGE_SIZE, SEEK_SET);
+	if (page_addr < segment->file_size) {
+		lseek(exec_fd, segment->offset + page_addr, SEEK_SET);
 
 		int bytes_read = read(exec_fd, (void *) mapped_addr,
-				MIN(segment->file_size - page_index * PAGE_SIZE, PAGE_SIZE));
+				MIN(segment->file_size - page_addr, PAGE_SIZE));
 
 		if (bytes_read == -1) {
 			fprintf(stderr, "Error reading from file\n");
@@ -106,7 +106,7 @@ void so_sigaction(int sig_no, siginfo_t *sig_info, void *context)
 		/* Checking boundaries of this segment */
 
 		if (segment->vaddr <= page_fault_addr &&
-			page_fault_addr < segment->vaddr + segment->mem_size) {
+			page_fault_addr < segment->vaddr + segment->file_size) {
 			so_map_page(page_fault_addr, segment);
 			return;
 		}

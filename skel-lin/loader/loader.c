@@ -28,7 +28,7 @@ static void* prev_handler;
 
 void alloc_seg_data(so_seg_t *segment)
 {
-	int possible_pages = segment->file_size / PAGE_SIZE;
+	int possible_pages = segment->mem_size / PAGE_SIZE;
 	segment->data = (void*) malloc(possible_pages * sizeof(char));
 	memset(segment->data, 0, possible_pages * sizeof(char));
 }
@@ -66,19 +66,15 @@ void so_map_page(uintptr_t page_fault_addr, so_seg_t *segment)
 	/* Copying from file into memory */
 
 	lseek(exec_fd, segment->offset + page_index * PAGE_SIZE, SEEK_SET);
-	int bytes_read = read(exec_fd, (void*) mapped_addr, PAGE_SIZE);
+
+	int bytes_read = read(exec_fd, (void*) mapped_addr,
+		(page_index == segment->file_size / PAGE_SIZE) ?
+			segment->file_size - page_index * PAGE_SIZE :
+			PAGE_SIZE);
+
 	if (bytes_read == -1){
 		fprintf(stderr, "Error reading from file\n");
 		exit(EXIT_FAILURE);
-	}
-
-	/* Last page */
-
-	if (page_index == segment->file_size / PAGE_SIZE) {
-		//fprintf(stderr, "%s\n", "CUUC1");
-		memset((void*)((int)(segment->vaddr) + segment->file_size),
-			0, segment->mem_size - segment->file_size);
-		//fprintf(stderr, "%s\n", "CUUC2");
 	}
 
 	/* Setting page permissions */
